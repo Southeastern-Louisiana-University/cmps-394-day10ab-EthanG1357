@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>UI</title>
+</head>
+<body style="text-align:center; font-family:Arial;">
+
+  <h1 id="message">Not logged in</h1>
+
+  <button onclick="login()">Login</button>
+  <button onclick="logout()">Logout</button>
+  <button onclick="getItem()">Test Protected API</button>
+
+  <script>
+    const keycloakUrl = "http://localhost:8081";
+    const realm = "myrealm";
+    const clientId = "myclient";
+
+    function login() {
+      window.location.href =
+        `${keycloakUrl}/realms/${realm}/protocol/openid-connect/auth` +
+        `?client_id=${clientId}` +
+        `&response_type=token` +
+        `&redirect_uri=http://localhost`;
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      document.getElementById("message").innerText = "Logged out";
+    }
+
+    
+    const hash = window.location.hash;
+    if (hash.includes("access_token")) {
+      const token = hash.split("&")[0].split("=")[1];
+      localStorage.setItem("token", token);
+      document.getElementById("message").innerText = "Logged in!";
+    }
+
+    
+    function getItem() {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        alert("You must log in first!");
+        return;
+      }
+
+      fetch("/api/items/1", {
+        headers: {
+          "Authorization": "Bearer " + token
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log(data);
+        alert("API Response: " + JSON.stringify(data));
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Request failed");
+      });
+    }
+  </script>
+
+</body>
+</html>
