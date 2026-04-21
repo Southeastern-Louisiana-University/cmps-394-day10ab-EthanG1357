@@ -1,0 +1,80 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mydb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 5
+      timeout: 5s
+    networks:
+      - app_network
+
+  api1:
+    build: ./api
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: mydb
+      API_INSTANCE: "1"
+      KEYCLOAK_URL: http://keycloak:8080
+      REALM: myrealm
+      CLIENT_ID: myclient
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  api2:
+    build: ./api
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: mydb
+      API_INSTANCE: "2"
+      KEYCLOAK_URL: http://keycloak:8080
+      REALM: myrealm
+      CLIENT_ID: myclient
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8081:8080"
+    networks:
+      - app_network
+
+  ui:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./ui:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - api1
+      - api2
+      - keycloak
+    networks:
+      - app_network
+
+networks:
+  app_network:
